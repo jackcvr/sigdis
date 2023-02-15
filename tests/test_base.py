@@ -39,6 +39,25 @@ def test_disconnect(sample_signal):
     assert res is False
 
 
+def test_disconnect_with_sender(sample_signal):
+    sender_obj = object()
+
+    def receiver(**_):
+        return True
+
+    sample_signal.connect(receiver, sender=sender_obj)
+    assert receiver in list(f for _, f in sample_signal._live_receivers(sender_obj))
+    assert receiver not in list(f for _, f in sample_signal._live_receivers())
+
+    res = sample_signal.disconnect(receiver)
+    assert res is False
+    assert receiver in list(f for _, f in sample_signal._live_receivers(sender_obj))
+
+    res = sample_signal.disconnect(receiver, sender=sender_obj)
+    assert res is True
+    assert receiver not in list(f for _, f in sample_signal._live_receivers(sender_obj))
+
+
 def test_send(sample_signal):
     items = []
     item = "test"

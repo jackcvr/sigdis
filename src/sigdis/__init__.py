@@ -34,8 +34,7 @@ class Signal:
 
     def _live_receivers(self, sender: t.Any = None) -> t.Generator[t.Tuple[LookupKey, t.Callable], None, None]:
         sender_id = _make_id(sender)
-        for key in tuple(self._references.keys()):
-            func = self._references[key]
+        for key, func in tuple(self._references.items()):
             if isinstance(func, weakref.ReferenceType):
                 func = func()
             if func:
@@ -58,8 +57,8 @@ class Signal:
                 self._references[key] = func
         return func
 
-    def disconnect(self, func: t.Callable) -> bool:
-        for key, receiver in self._live_receivers():
+    def disconnect(self, func: t.Callable, sender: t.Any = None) -> bool:
+        for key, receiver in self._live_receivers(sender):
             if func == receiver:
                 del self._references[key]
                 return True
