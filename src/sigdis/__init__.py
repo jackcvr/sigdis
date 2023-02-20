@@ -2,22 +2,26 @@ import logging
 import typing as t
 import weakref
 
-ObjectID = t.Union[int, t.Tuple[int, int]]
+ReceiverID = t.Tuple[int, str]
 
 NONE_ID = id(None)
 
 
-def _make_id(target) -> ObjectID:
-    if target is None:
+def make_receiver_id(target: t.Callable) -> ReceiverID:
+    if hasattr(target, "__self__") and hasattr(target, "__func__"):
+        return id(target.__self__), target.__func__.__name__
+    return id(target), ""
+
+
+def make_sender_id(sender: t.Any) -> int:
+    if sender is None:
         return NONE_ID
-    if hasattr(target, "__func__"):
-        return id(target.__self__), id(target.__func__)
-    return id(target)
+    return id(sender)
 
 
 class LookupKey(t.NamedTuple):
-    receiver_id: ObjectID
-    sender_id: ObjectID
+    receiver_id: ReceiverID
+    sender_id: int
 
 
 Receiver = t.Union[weakref.ReferenceType, t.Callable]
@@ -33,7 +37,7 @@ class Signal:
         self._references: References = {}
 
     def _live_receivers(self, sender: t.Any = None) -> t.Generator[t.Tuple[LookupKey, t.Callable], None, None]:
-        sender_id = _make_id(sender)
+        sender_id = make_sender_id(sender)
         for key, func in tuple(self._references.items()):
             if isinstance(func, weakref.ReferenceType):
                 func = func()
@@ -46,7 +50,7 @@ class Signal:
     def connect(self, func: t.Callable = None, sender: t.Any = None, weak: bool = True) -> t.Optional[t.Callable]:
         if not func:
             return lambda f: self.connect(f, sender=sender, weak=weak)
-        key = LookupKey(_make_id(func), _make_id(sender))
+        key = LookupKey(make_receiver_id(func), make_sender_id(sender))
         if key not in self._references:
             if weak:
                 ref_type: t.Type[weakref.ReferenceType] = weakref.ref

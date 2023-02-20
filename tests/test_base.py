@@ -1,16 +1,52 @@
 import pytest
 
+from sigdis import make_receiver_id, make_sender_id
+
 
 class CustomError(Exception):
     pass
 
 
-def test_connect(sample_signal):
+def test_make_receiver_id_function():
+    def func():
+        pass
+
+    assert make_receiver_id(func) == (id(func), "")
+
+
+def test_make_receiver_id_method():
+    class C:
+        def func(self):
+            pass
+
+    c = C()
+    assert make_receiver_id(c.func) == (id(c), c.func.__name__)
+
+
+def test_make_sender_id():
+    class C:
+        pass
+
+    assert make_sender_id(None) == id(None)
+    assert make_sender_id(C) == id(C)
+
+
+def test_connect_function(sample_signal):
     def receiver(**_):
         return True
 
     sample_signal.connect(receiver)
     assert receiver in list(f for _, f in sample_signal._live_receivers())
+
+
+def test_connect_method(sample_signal):
+    class C:
+        def receiver(**_):
+            return True
+
+    c = C()
+    sample_signal.connect(c.receiver)
+    assert c.receiver in list(f for _, f in sample_signal._live_receivers())
 
 
 def test_connect_with_sender(sample_signal):
