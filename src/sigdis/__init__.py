@@ -47,23 +47,23 @@ class Signal:
             else:
                 del self._references[key]
 
-    def connect(self, func: t.Callable = None, sender: t.Any = None, weak: bool = True) -> t.Optional[t.Callable]:
-        if not func:
+    def connect(self, receiver: t.Callable = None, sender: t.Any = None, weak: bool = True) -> t.Optional[t.Callable]:
+        if not receiver:
             return lambda f: self.connect(f, sender=sender, weak=weak)
-        key = LookupKey(make_receiver_id(func), make_sender_id(sender))
+        key = LookupKey(make_receiver_id(receiver), make_sender_id(sender))
         if key not in self._references:
             if weak:
                 ref_type: t.Type[weakref.ReferenceType] = weakref.ref
-                if hasattr(func, "__self__") and hasattr(func, "__func__"):
+                if hasattr(receiver, "__self__") and hasattr(receiver, "__func__"):
                     ref_type = weakref.WeakMethod
-                self._references[key] = ref_type(func)
+                self._references[key] = ref_type(receiver)
             else:
-                self._references[key] = func
-        return func
+                self._references[key] = receiver
+        return receiver
 
-    def disconnect(self, func: t.Callable, sender: t.Any = None) -> bool:
-        for key, receiver in self._live_receivers(sender):
-            if func == receiver:
+    def disconnect(self, receiver: t.Callable, sender: t.Any = None) -> bool:
+        for key, live_receiver in self._live_receivers(sender):
+            if receiver == live_receiver:
                 del self._references[key]
                 return True
         return False
